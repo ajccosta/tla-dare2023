@@ -13,7 +13,7 @@ VARIABLE
 
 Message == [ type: { "prepare", "prepared", "pre-commit", "commit", "ack", "done", "abort"}, src: RM, dest: RM]
 
-RMState == [ state: { "working"}, step: {"working", "prepare", "pre-commit", "commit", "done", "aborted"}, role: {"participant", "coordinator"} ]
+RMState == [ state: { "working"}, step: {"working", "prepare", "pre-commit", "commit", "done", "aborted"} ]
  
 Init ==     /\ rmState = [ r \in RM |-> [ state |-> "working", step |-> "working" , role |-> "participant" ] ]
             /\ msgsInTransit = {}
@@ -46,11 +46,7 @@ DeliverMessage ==   /\ IF Cardinality(msgsInTransit) > 0
                                 /\ UNCHANGED<<rmState,coordinator, msgs>>
                         ELSE
                             UNCHANGED<<msgsInTransit, msgs, msgsReceived, rmState, coordinator>>
-            
-UpgradeToCoordinator == /\ CHOOSE r \in RM: rmState' = [rmState EXCEPT ![r].role = "coordinator"]
-                        /\ UNCHANGED<<msgsInTransit, msgsReceived, msgs, coordinator>>
-
-
+           
 (***************************************************************************
 Coordinator Functions
  ***************************************************************************)
@@ -91,52 +87,51 @@ StartPre_commit ==  /\ rmState[coordinator].step = "prepare"
                     /\ rmState' = [rmState EXCEPT ![coordinator].step = "pre-commit"]
                     /\ ReceivedEveryMessage("prepared")
                     /\ UNCHANGED<<msgs, msgsReceived, msgsInTransit, coordinator>>
-                    
-finish == /\ rmState[coordinator].step = "pre-commit"
-          /\ \A r \in RM: rmState' = [rmState EXCEPT ![r].step = "done"]
-          /\ UNCHANGED<<msgs, msgsReceived, msgsInTransit, coordinator>>
 
-\*SendPre_commit(r) ==    /\ coordinator.step = "pre-commit"
-\*                        /\ ~ HasSentEveryMessageRound("pre-commit") 
-\*                        /\ r # coordinator
-\*                        /\ SendMessage([ type |-> "pre-commit", src |-> coordinator, dest |-> r ])
-\*
-\*Pre_commit(r) ==    /\ r.state = "working"
-\*                    /\ r # coordinator
-\*                    /\ r.step = "prepare"
-\*                    /\ [ type |-> "pre-commit", src |-> coordinator, dest |-> r] \in msgsReceived[r]
-\*                    /\ rmState' = [rmState EXCEPT ![r].step = "pre-commit"]
-\*                    /\ SendMessage([ type |-> "pre-commit", src |-> r, dest |-> coordinator ])
+SendPre_commit(r) ==    /\ rmState[coordinator].step = "pre-commit"
+                        /\ ~ HasSentEveryMessageRound("pre-commit") 
+                        /\ r # coordinator
+                        /\ SendMessage([ type |-> "pre-commit", src |-> coordinator, dest |-> r ])
+                        /\ UNCHANGED<<msgsReceived, coordinator, rmState>>
+
+Pre_commit(r) ==    /\ rmState[r].state = "working"
+                    /\ r # coordinator
+                    /\ rmState[r].step = "prepare"
+                    /\ [ type |-> "pre-commit", src |-> coordinator, dest |-> r] \in msgsReceived[r]
+                    /\ rmState' = [rmState EXCEPT ![r].step = "pre-commit"]
+                    /\ SendMessage([ type |-> "pre-commit", src |-> r, dest |-> coordinator ])
+                    /\ UNCHANGED<<coordinator, msgsReceived>>
 
 (***************************************************************************
 Commit Actions
  ***************************************************************************)
 
-\*StartCommit ==  /\ coordinator.step = "pre-commit"
-\*                /\ rmState' = [rmState EXCEPT ![coordinator].step = "commit"]
-\*                /\ ReceivedEveryMessage("pre-commit") 
-\*
-\*SendCommit(r) ==    /\ coordinator.step = "commit"
-\*                    /\ ~ HasSentEveryMessageRound("commit") 
-\*                    /\ r # coordinator
-\*                    /\ SendMessage([ type |-> "commit", src |-> coordinator, dest |-> r ])
-\*                    
-\*                    
+StartCommit ==  /\ rmState[coordinator].step = "pre-commit"
+                /\ rmState' = [rmState EXCEPT ![coordinator].step = "commit"]
+                /\ ReceivedEveryMessage("pre-commit") 
+                /\ UNCHANGED<<coordinator, msgs, msgsInTransit, msgsReceived>>
+
+SendCommit(r) ==    /\ coordinator.step = "commit"
+                    /\ ~ HasSentEveryMessageRound("commit") 
+                    /\ r # coordinator
+                    /\ SendMessage([ type |-> "commit", src |-> coordinator, dest |-> r ])
+                    /\ UNCHANGED<<coordinator, msgsReceived, rmState>>
+                    
 
 (***************************************************************************
 Spec
  ***************************************************************************)
+                    
+finish == /\ rmState[coordinator].step = "commit"
+          /\ \A r \in RM: rmState' = [rmState EXCEPT ![r].step = "done"]
+          /\ UNCHANGED<<msgs, msgsReceived, msgsInTransit, coordinator>>
              
-Next == IF ~ \E r \in RM: rmState[r].role /= "coordinator"
-        THEN
-           /\ UpgradeToCoordinator
-        ELSE
-            \/ \E r \in RM: \/ SendPrepare(r)
+Next == \E r \in RM: \/ SendPrepare(r)
                             \/ Prepare(r)
                             \/ StartPre_commit
                             \/ finish
                             \/ BeginTransaction
-            \/ DeliverMessage
+                            \/ DeliverMessage
 
 TypeInv == /\ \A r \in RM: rmState = [rmState EXCEPT ![r].step = "done"]
 
@@ -146,6 +141,6 @@ THEOREM Spec => TypeInv
 
 =============================================================================
 \* Modification History
-\* Last modified Sun Oct 08 19:02:01 WEST 2023 by monkey
+\* Last modified Sun Oct 08 19:34:07 WEST 2023 by monkey
 \* Created Fri Oct 06 12:09:27 WEST 2023 by monkey
 
