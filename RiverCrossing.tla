@@ -1,6 +1,5 @@
----------------------- MODULE MissionariesAndCannibals ----------------------
+---------------------- MODULE RiverCrossing ----------------------
 EXTENDS Integers, FiniteSets
-CONSTANTS Missionaries, Cannibals
 
 VARIABLES curr_dock, who_is_on_dock, who_is_on_boat, docking_or_not
 
@@ -66,5 +65,5 @@ Next == /\ docking_or_not' = SwitchBoatOrDock(docking_or_not)
 
 =============================================================================
 \* Modification History
-\* Last modified Sat Oct 07 16:55:02 WEST 2023 by andre
+\* Last modified Sun Oct 08 12:10:40 WEST 2023 by andre
 \* Last modified Sat Oct 07 16:46:55 WEST 2023 by andre

@@ -1,4 +1,4 @@
--------------------------------- MODULE 3pc --------------------------------
+-------------------------------- MODULE 2pc --------------------------------
 
 (***************************************************************************)
 (* This spec. does not have:                                               *)
@@ -95,20 +95,20 @@ TPNext ==
 TPSpec == TPInit /\ [][TPNext]_<<rmState, tmState, tmPrepared, msgs>>
 
 
-(* AC1 (agreement): Any two processes that decide, decide the same value 														*)
+(* AC1 (agreement): Any two processes that decide, decide the same value                                                        *)
 TPConsistent ==  
   \A rm1, rm2 \in RM : ~ /\ rmState[rm1] = "aborted"
                          /\ rmState[rm2] = "committed"              
 
 
-(* AC2 (validity, part 1): If some process starts with the value “no” then “abort” is the only possible decision 				*)
+(* AC2 (validity, part 1): If some process starts with the value “no” then “abort” is the only possible decision                *)
 TPValidity1 ==
   tmState = "aborted" => \E rm \in RM : rmState[rm] = "aborted"
   
 
-(* AC3 (validity, part 2): If all processes start with value “yes” and none fails, then “commit” is the only possible decision 	*)
+(* AC3 (validity, part 2): If all processes start with value “yes” and none fails, then “commit” is the only possible decision  *)
 
-(* AC4 (termination): If eventually all processes recover from all faults, then, eventually all processes decide 				*)
+(* AC4 (termination): If eventually all processes recover from all faults, then, eventually all processes decide                *)
 
 
 THEOREM TPSpec => [](TPTypeOK /\ TPConsistent /\ TPValidity1)
@@ -116,5 +116,5 @@ THEOREM TPSpec => [](TPTypeOK /\ TPConsistent /\ TPValidity1)
 -----------------------------------------------------------------------------
 =============================================================================
 \* Modification History
-\* Last modified Mon Oct 09 17:22:05 WEST 2023 by andre
-\* Created Sun Oct 08 17:35:47 WEST 2023 by andre
+\* Last modified Mon Oct 09 17:27:01 WEST 2023 by andre
+\* Created Mon Oct 09 17:26:32 WEST 2023 by andre
