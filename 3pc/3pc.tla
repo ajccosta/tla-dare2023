@@ -18,7 +18,7 @@ VARIABLES
 
 
 Message ==
-  [type : {"Prepared"}, rm : RM]  \cup  [type : {"Commit", "Abort"}]
+  [type : {"Prepared", "Aborted"}, rm : RM]  \cup  [type : {"Commit", "Abort"}]
    
 
 TPTypeOK ==  
@@ -51,8 +51,9 @@ TMCommit ==
   /\ UNCHANGED <<rmState, tmPrepared>>
 
 
-TMAbort ==
+TMAbort(rm) ==
   /\ tmState = "init"
+  /\ [type |-> "Aborted", rm |-> rm] \in msgs
   /\ tmState' = "aborted"
   /\ msgs' = msgs \cup {[type |-> "Abort"]}
   /\ UNCHANGED <<rmState, tmPrepared>>
@@ -68,7 +69,8 @@ RMPrepare(rm) ==
 RMChooseToAbort(rm) ==
   /\ rmState[rm] = "working"
   /\ rmState' = [rmState EXCEPT ![rm] = "aborted"]
-  /\ UNCHANGED <<tmState, tmPrepared, msgs>>
+  /\ msgs' = msgs \cup {[type |-> "Aborted", rm |-> rm]}
+  /\ UNCHANGED <<tmState, tmPrepared>>
 
 
 RMRcvCommitMsg(rm) ==
@@ -84,23 +86,35 @@ RMRcvAbortMsg(rm) ==
 
 
 TPNext ==
-  \/ TMCommit \/ TMAbort
+  \/ TMCommit
   \/ \E rm \in RM : 
        TMRcvPrepared(rm) \/ RMPrepare(rm) \/ RMChooseToAbort(rm)
-         \/ RMRcvCommitMsg(rm) \/ RMRcvAbortMsg(rm)
+         \/ RMRcvCommitMsg(rm) \/ RMRcvAbortMsg(rm) \/ TMAbort(rm)
 
 -----------------------------------------------------------------------------
 TPSpec == TPInit /\ [][TPNext]_<<rmState, tmState, tmPrepared, msgs>>
 
-\* From TCommit 
+
+(* AC1 (agreement): Any two processes that decide, decide the same value 														*)
 TPConsistent ==  
   \A rm1, rm2 \in RM : ~ /\ rmState[rm1] = "aborted"
                          /\ rmState[rm2] = "committed"              
 
-THEOREM TPSpec => [](TPTypeOK /\ TPConsistent)
+
+(* AC2 (validity, part 1): If some process starts with the value “no” then “abort” is the only possible decision 				*)
+TPValidity1 ==
+  tmState = "aborted" => \E rm \in RM : rmState[rm] = "aborted"
+  
+
+(* AC3 (validity, part 2): If all processes start with value “yes” and none fails, then “commit” is the only possible decision 	*)
+
+(* AC4 (termination): If eventually all processes recover from all faults, then, eventually all processes decide 				*)
+
+
+THEOREM TPSpec => [](TPTypeOK /\ TPConsistent /\ TPValidity1)
 
 -----------------------------------------------------------------------------
 =============================================================================
 \* Modification History
-\* Last modified Mon Oct 09 16:08:23 WEST 2023 by andre
+\* Last modified Mon Oct 09 17:22:05 WEST 2023 by andre
 \* Created Sun Oct 08 17:35:47 WEST 2023 by andre
