@@ -37,17 +37,17 @@ Init ==
 TMRcvPrepare(r) ==
     /\ tmState = "init"
     /\ [ type |-> "prepared", rm  |-> r ] \in msgs
+    /\ r \notin rmPrepared
     /\ rmPrepared' = rmPrepared \cup {r}
     /\ UNCHANGED<<tmState, rmState, rmPrecommitted, msgs>>
     
 TMRcvPrecommit(r) ==
     /\ tmState = "init"
     /\ [ type |-> "pre-ack", rm |-> r ] \in msgs
+    /\ r \notin rmPrecommitted
     /\ rmPrecommitted' = rmPrecommitted \cup {r}
     /\ UNCHANGED<<tmState, rmState, rmPrepared, msgs>>
    
-   
-    
 TMPrecommit ==
     /\ tmState = "init"
     /\ rmPrepared = RM
@@ -69,8 +69,8 @@ RMPrepare(r) ==
     /\ UNCHANGED<<tmState, rmPrepared, rmPrecommitted>>
     
 RMPrecommit(r) ==
+    /\ rmState[r] = "prepared"
     /\ [ type |-> "pre-commit" ] \in msgs
-    /\ rmState[r] = "prepare"
     /\ rmState' = [ rmState EXCEPT ![r] = "pre-committed" ]
     /\ msgs' = msgs \cup {[ type |-> "pre-ack", rm |-> r ]}
     /\ UNCHANGED<<tmState, rmPrepared, rmPrecommitted>>
@@ -101,7 +101,7 @@ THEOREM Spec => 3pcConsistent /\ []TypeOK
 
 =============================================================================
 \* Modification History
+\* Last modified Tue Oct 10 14:28:03 WEST 2023 by monkey
 \* Last modified Tue Oct 10 12:16:15 WEST 2023 by andre
-\* Last modified Tue Oct 10 11:22:54 WEST 2023 by monkey
 \* Created Fri Oct 06 12:09:27 WEST 2023 by monkey
 
