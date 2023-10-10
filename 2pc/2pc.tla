@@ -12,18 +12,20 @@ CONSTANT RM \* The set of resource managers
 
 VARIABLES
   rmState,       \* $rmState[rm]$ is the state of resource manager RM.
+  rmPrevState,   \* The state $rmState[rm]$ was previously in before crashing
   tmState,       \* The state of the transaction manager.
   tmPrepared,    \* The set of RMs from which the TM has received $"Prepared"$
   msgs           \* messages.
 
-vars == <<rmState, tmState, tmPrepared, msgs>>
+vars == <<rmState, rmPrevState, tmState, tmPrepared, msgs>>
 
 Message ==
   [type : {"Prepared", "Aborted"}, rm : RM]  \cup  [type : {"Commit", "Abort"}]
    
 
 TPTypeOK ==  
-  /\ rmState \in [RM -> {"working", "prepared", "committed", "aborted"}]
+  /\ rmState \in [RM -> {"working", "prepared", "committed", "aborted", "crashed"}]
+  /\ rmPrevState \in [RM -> {"working", "prepared", "committed", "aborted", "crashed"}]
   /\ tmState \in {"init", "committed", "aborted"}
   /\ tmPrepared \subseteq RM
   /\ msgs \subseteq Message
@@ -31,6 +33,7 @@ TPTypeOK ==
 
 TPInit ==   
   /\ rmState = [rm \in RM |-> "working"]
+  /\ rmPrevState = [rm \in RM |-> "working"]
   /\ tmState = "init"
   /\ tmPrepared   = {}
   /\ msgs = {}
@@ -41,7 +44,7 @@ TMRcvPrepared(rm) ==
   /\ tmState = "init"
   /\ [type |-> "Prepared", rm |-> rm] \in msgs
   /\ tmPrepared' = tmPrepared \cup {rm}
-  /\ UNCHANGED <<rmState, tmState, msgs>>
+  /\ UNCHANGED <<rmState, tmState, msgs, rmPrevState>>
 
 
 TMCommit ==
@@ -49,7 +52,7 @@ TMCommit ==
   /\ tmPrepared = RM
   /\ tmState' = "committed"
   /\ msgs' = msgs \cup {[type |-> "Commit"]}
-  /\ UNCHANGED <<rmState, tmPrepared>>
+  /\ UNCHANGED <<rmState, tmPrepared, rmPrevState>>
 
 
 TMAbort(rm) ==
@@ -57,40 +60,56 @@ TMAbort(rm) ==
   /\ [type |-> "Aborted", rm |-> rm] \in msgs
   /\ tmState' = "aborted"
   /\ msgs' = msgs \cup {[type |-> "Abort"]}
-  /\ UNCHANGED <<rmState, tmPrepared>>
+  /\ UNCHANGED <<rmState, tmPrepared, rmPrevState>>
 
 
 RMPrepare(rm) == 
   /\ rmState[rm] = "working"
   /\ rmState' = [rmState EXCEPT ![rm] = "prepared"]
   /\ msgs' = msgs \cup {[type |-> "Prepared", rm |-> rm]}
-  /\ UNCHANGED <<tmState, tmPrepared>>
+  /\ UNCHANGED <<tmState, tmPrepared, rmPrevState>>
 
   
 RMChooseToAbort(rm) ==
   /\ rmState[rm] = "working"
   /\ rmState' = [rmState EXCEPT ![rm] = "aborted"]
   /\ msgs' = msgs \cup {[type |-> "Aborted", rm |-> rm]}
-  /\ UNCHANGED <<tmState, tmPrepared>>
+  /\ UNCHANGED <<tmState, tmPrepared, rmPrevState>>
 
 
 RMRcvCommitMsg(rm) ==
   /\ [type |-> "Commit"] \in msgs
   /\ rmState' = [rmState EXCEPT ![rm] = "committed"]
-  /\ UNCHANGED <<tmState, tmPrepared, msgs>>
+  /\ UNCHANGED <<tmState, tmPrepared, msgs, rmPrevState>>
 
 
 RMRcvAbortMsg(rm) ==
   /\ [type |-> "Abort"] \in msgs
   /\ rmState' = [rmState EXCEPT ![rm] = "aborted"]
+  /\ UNCHANGED <<tmState, tmPrepared, msgs, rmPrevState>>
+
+
+RMCrash(rm) == 
+  /\ rmState[rm] /= "crashed"
+  /\ rmPrevState' = [rmPrevState EXCEPT ![rm] = rmState[rm]]
+  /\ rmState' = [rmState EXCEPT ![rm] = "crashed"]
   /\ UNCHANGED <<tmState, tmPrepared, msgs>>
 
+
+RMRecover(rm) == 
+  /\ rmState[rm] = "crashed"
+  /\ rmState' = [rmState EXCEPT ![rm] = rmPrevState[rm]]
+  /\ rmPrevState' = [rmPrevState EXCEPT ![rm] = "crashed"]
+  /\ UNCHANGED <<tmState, tmPrepared, msgs>>
+  
 
 TPNext ==
   \/ TMCommit
   \/ \E rm \in RM : 
        TMRcvPrepared(rm) \/ RMPrepare(rm) \/ RMChooseToAbort(rm)
          \/ RMRcvCommitMsg(rm) \/ RMRcvAbortMsg(rm) \/ TMAbort(rm)
+         \/ RMCrash(rm) \/ RMRecover(rm)
+
 
 -----------------------------------------------------------------------------
 Fairness == 
@@ -142,5 +161,5 @@ THEOREM TPSpec => TPValidity2
 -----------------------------------------------------------------------------
 =============================================================================
 \* Modification History
-\* Last modified Tue Oct 10 15:29:57 WEST 2023 by andre
+\* Last modified Tue Oct 10 16:02:26 WEST 2023 by andre
 \* Created Mon Oct 09 17:26:32 WEST 2023 by andre
