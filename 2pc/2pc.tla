@@ -93,7 +93,9 @@ TPNext ==
          \/ RMRcvCommitMsg(rm) \/ RMRcvAbortMsg(rm) \/ TMAbort(rm)
 
 -----------------------------------------------------------------------------
-Fairness == /\ WF_vars(TMCommit) /\ (\A rm \in RM : SF_vars(TMAbort(rm)))
+Fairness == /\ WF_vars(TMCommit)
+            /\ (\A rm \in RM : WF_vars(TMAbort(rm)))
+            /\ (\A rm \in RM: WF_vars(TMRcvPrepared(rm)))
 
 TPSpec == TPInit /\ [][TPNext]_vars /\ Fairness
 
@@ -127,5 +129,5 @@ THEOREM TPSpec => TPValidity2
 -----------------------------------------------------------------------------
 =============================================================================
 \* Modification History
-\* Last modified Mon Oct 09 21:04:47 WEST 2023 by andre
+\* Last modified Tue Oct 10 12:41:10 WEST 2023 by andre
 \* Created Mon Oct 09 17:26:32 WEST 2023 by andre
