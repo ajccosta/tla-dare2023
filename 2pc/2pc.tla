@@ -93,15 +93,23 @@ TPNext ==
          \/ RMRcvCommitMsg(rm) \/ RMRcvAbortMsg(rm) \/ TMAbort(rm)
 
 -----------------------------------------------------------------------------
-Fairness == /\ WF_vars(TMCommit)
-            /\ (\A rm \in RM : WF_vars(TMAbort(rm)))
+Fairness == 
+            \* For validity 1 and 2:
+            /\ WF_vars(TMCommit)
+            /\ (\A rm \in RM: WF_vars(TMAbort(rm)))
             /\ (\A rm \in RM: WF_vars(TMRcvPrepared(rm)))
+            \* For termination:
+            /\ (\A rm \in RM: WF_vars(RMRcvAbortMsg(rm)))
+            /\ (\A rm \in RM: WF_vars(RMRcvCommitMsg(rm)))
+            /\ (\A rm \in RM: WF_vars(RMPrepare(rm)))
+            
 
 TPSpec == TPInit /\ [][TPNext]_vars /\ Fairness
 
 
 (* AC1 (agreement): Any two processes that decide, decide the same value                                                        *)
-TPAgreement ==  
+TPAgreement ==
+    \* No two processes can be in different decision states (i.e., decide different things)
   \A rm1, rm2 \in RM : ~ /\ rmState[rm1] = "aborted"
                          /\ rmState[rm2] = "committed"              
 
@@ -109,6 +117,7 @@ TPAgreement ==
 (* AC2 (validity, part 1): If some process starts with the value “no” then “abort” is the only possible decision                *)
 TPValidity1 ==
 \*  tmState = "aborted" => \E rm \in RM : rmState[rm] = "aborted"
+    \* Translation: if any process is in aborted state (decided abort), then TM will eventually decide abort. 
     (\E rm \in RM : rmState[rm] = "aborted") ~> (tmState = "aborted")
   
 
@@ -116,11 +125,15 @@ TPValidity1 ==
 TPValidity2 ==
 \*  ~ (\E rm \in RM : rmState[rm] = "aborted" \/ rmState[rm] = "working")
 \*        => tmState = "committed" \/ tmState = "init"
+    \* Translation: if all processes are prepared, then eventually TM will decide commit. 
   ~ (\E rm \in RM : rmState[rm] /= "prepared") ~> (tmState = "committed")
   
 
 (* AC4 (termination): If eventually all processes recover from all faults, then, eventually all processes decide                *)
-
+TPTermination ==
+    \* Translation: if eventually no process is crashed, then eventually all will decide (the same thing). 
+    <>(~ (\E rm \in RM : rmState[rm] /= "working" /\ rmState[rm] /= "prepared" /\ rmState[rm] /= "aborted")) ~> 
+        (~ (\E rm \in RM : rmState[rm] /= "aborted")) \/ (~ (\E rm \in RM : rmState[rm] /= "committed"))
 
 THEOREM TPSpec => []TPTypeOK
 THEOREM TPSpec => []TPAgreement
@@ -129,5 +142,5 @@ THEOREM TPSpec => TPValidity2
 -----------------------------------------------------------------------------
 =============================================================================
 \* Modification History
-\* Last modified Tue Oct 10 12:41:10 WEST 2023 by andre
+\* Last modified Tue Oct 10 15:29:57 WEST 2023 by andre
 \* Created Mon Oct 09 17:26:32 WEST 2023 by andre
