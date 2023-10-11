@@ -121,6 +121,9 @@ Fairness ==
             /\ (\A rm \in RM: WF_vars(TMAbort(rm)))
             /\ (\A rm \in RM: WF_vars(TMRcvPrepared(rm)))
             \* For termination:
+            \*      Although only 1 Strong Fairness action is required,
+            \*      that would mean some actions that should be of equal
+            \*      priority are not equally considered (I think).
             /\ (\A rm \in RM: SF_vars(RMRcvAbortMsg(rm)))
             /\ (\A rm \in RM: SF_vars(RMRcvCommitMsg(rm)))
             /\ (\A rm \in RM: SF_vars(RMPrepare(rm)))
@@ -167,5 +170,5 @@ THEOREM TPSpec => TPTermination
 -----------------------------------------------------------------------------
 =============================================================================
 \* Modification History
-\* Last modified Wed Oct 11 12:23:02 WEST 2023 by andre
+\* Last modified Wed Oct 11 12:29:47 WEST 2023 by andre
 \* Created Mon Oct 09 17:26:32 WEST 2023 by andre
