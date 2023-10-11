@@ -1,10 +1,13 @@
 -------------------------------- MODULE 2pc --------------------------------
 
 (***************************************************************************)
-(* This spec. does not have:                                               *)
-(*      abort messages -- DONE: TM can no longer abort if no one aborts    *)
-(*      liveness properties                                                *)
-(*      message loss                                                       *)
+(* This spec. has          :                                               *)
+(*      Liveness and safety properties of the Atomic Commit Protocol       *)
+(*      Resource Managers can crash at any time                            *)
+(*                                                                         *)
+(* Future Work:                                                            *)
+(*      Allow Transaction Manager to crash                                 *)
+(*      Message Loss / Network Partition (likely modelled the same way)    *)
 (***************************************************************************)
 
 CONSTANT RM \* The set of resource managers
@@ -118,9 +121,11 @@ Fairness ==
             /\ (\A rm \in RM: WF_vars(TMAbort(rm)))
             /\ (\A rm \in RM: WF_vars(TMRcvPrepared(rm)))
             \* For termination:
-            /\ (\A rm \in RM: WF_vars(RMRcvAbortMsg(rm)))
-            /\ (\A rm \in RM: WF_vars(RMRcvCommitMsg(rm)))
-            /\ (\A rm \in RM: WF_vars(RMPrepare(rm)))
+            /\ (\A rm \in RM: SF_vars(RMRcvAbortMsg(rm)))
+            /\ (\A rm \in RM: SF_vars(RMRcvCommitMsg(rm)))
+            /\ (\A rm \in RM: SF_vars(RMPrepare(rm)))
+            /\ (\A rm \in RM: SF_vars(RMChooseToAbort(rm)))
+            /\ (\A rm \in RM: WF_vars(RMRecover(rm)))
             
 
 TPSpec == TPInit /\ [][TPNext]_vars /\ Fairness
@@ -135,31 +140,32 @@ TPAgreement ==
 
 (* AC2 (validity, part 1): If some process starts with the value “no” then “abort” is the only possible decision                *)
 TPValidity1 ==
-\*  tmState = "aborted" => \E rm \in RM : rmState[rm] = "aborted"
     \* Translation: if any process is in aborted state (decided abort), then TM will eventually decide abort. 
     (\E rm \in RM : rmState[rm] = "aborted") ~> (tmState = "aborted")
   
 
 (* AC3 (validity, part 2): If all processes start with value “yes” and none fails, then “commit” is the only possible decision  *)
 TPValidity2 ==
-\*  ~ (\E rm \in RM : rmState[rm] = "aborted" \/ rmState[rm] = "working")
-\*        => tmState = "committed" \/ tmState = "init"
-    \* Translation: if all processes are prepared, then eventually TM will decide commit. 
+    \* Translation: if all processes are prepared (which also means it is not crashed), then eventually TM will decide commit. 
   ~ (\E rm \in RM : rmState[rm] /= "prepared") ~> (tmState = "committed")
   
 
 (* AC4 (termination): If eventually all processes recover from all faults, then, eventually all processes decide                *)
 TPTermination ==
-    \* Translation: if eventually no process is crashed, then eventually all will decide (the same thing). 
-    <>(~ (\E rm \in RM : rmState[rm] /= "working" /\ rmState[rm] /= "prepared" /\ rmState[rm] /= "aborted")) ~> 
-        (~ (\E rm \in RM : rmState[rm] /= "aborted")) \/ (~ (\E rm \in RM : rmState[rm] /= "committed"))
+    \* Translation: if eventually no process is crashed, then eventually all will decide (the same thing).
+    \*              a process has decided if: it is in a decided state OR it was in a decided state (and is now crashed) 
+    (~ (\E rm \in RM : rmState[rm] = "crashed")) ~> 
+           (~ (\E rm \in RM : rmState[rm] /= "aborted"   /\ rmPrevState[rm] /= "aborted"))
+        \/ (~ (\E rm \in RM : rmState[rm] /= "committed" /\ rmPrevState[rm] /= "committed"))
+
 
 THEOREM TPSpec => []TPTypeOK
 THEOREM TPSpec => []TPAgreement
 THEOREM TPSpec => TPValidity1
 THEOREM TPSpec => TPValidity2
+THEOREM TPSpec => TPTermination
 -----------------------------------------------------------------------------
 =============================================================================
 \* Modification History
-\* Last modified Tue Oct 10 16:02:26 WEST 2023 by andre
+\* Last modified Wed Oct 11 12:23:02 WEST 2023 by andre
 \* Created Mon Oct 09 17:26:32 WEST 2023 by andre
