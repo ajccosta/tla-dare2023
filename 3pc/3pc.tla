@@ -24,7 +24,7 @@ _ABORT == "abort"
 _ABORTED == "aborted"
 _INIT == "init"
 
-vars == <<rmState, tmState, rmPrepared, rmPrecommitted, msgs>>
+vars == <<rmState, tmState, rmPrepared, rmPrecommitted, msgs, timeout>>
 
 Message == [ type: {_PREPARE, _PRECOMMIT, _COMMIT, _ABORT}] \cup
            [ type: {_PREPARED, _PRECOMMITTED, _ABORTED}, rm: RM ]
@@ -195,7 +195,7 @@ THEOREM Spec => []TypeOK
 
 =============================================================================
 \* Modification History
-\* Last modified Wed Oct 11 11:03:33 WEST 2023 by monkey
+\* Last modified Wed Oct 11 11:36:42 WEST 2023 by monkey
 \* Last modified Tue Oct 10 12:16:15 WEST 2023 by andre
 \* Created Fri Oct 06 12:09:27 WEST 2023 by monkey
 
