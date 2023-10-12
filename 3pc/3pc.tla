@@ -131,6 +131,7 @@ RMCommit(r) ==
 
 \* RM Chooses to abort during the prepare phase
 RMChooseToAbort(r) ==
+    /\ timeout = "off"
     /\ rmState[r] = _WORKING
     /\ rmState' = [rmState EXCEPT ![r] = _ABORTED]
     /\ r \notin rmPrepared
@@ -139,6 +140,7 @@ RMChooseToAbort(r) ==
 
 \* RM decides to abort after seeing the abort message from TM
 RMRcvAbortMsg(r) ==
+    /\ timeout = "off"
     /\ rmState[r] = _PREPARED \/ rmState[r] = _WORKING
     /\ [type |-> _ABORT] \in msgs
     /\ rmState' = [rmState EXCEPT ![r] = _ABORTED]
@@ -217,7 +219,7 @@ THEOREM Spec => <>Agreement
 
 =============================================================================
 \* Modification History
-\* Last modified Thu Oct 12 10:25:31 WEST 2023 by monkey
+\* Last modified Thu Oct 12 10:43:54 WEST 2023 by monkey
 \* Last modified Tue Oct 10 12:16:15 WEST 2023 by andre
 \* Created Fri Oct 06 12:09:27 WEST 2023 by monkey
 
