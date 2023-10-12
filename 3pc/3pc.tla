@@ -168,7 +168,7 @@ RMWhenTimeout(r) ==
 TMWhenTimeout == 
     /\ timeout = "on"
     /\ tmState \notin {_ABORTED, _COMMITTED}
-    /\  IF rmPrecommitted # {} /\ ~ [ type |-> _ABORT ] \in msgs
+    /\  IF rmPrecommitted # {}
         THEN
             /\ tmState' = _COMMITTED
         ELSE
@@ -219,7 +219,7 @@ THEOREM Spec => <>Agreement
 
 =============================================================================
 \* Modification History
-\* Last modified Thu Oct 12 10:43:54 WEST 2023 by monkey
+\* Last modified Thu Oct 12 12:15:03 WEST 2023 by monkey
 \* Last modified Tue Oct 10 12:16:15 WEST 2023 by andre
 \* Created Fri Oct 06 12:09:27 WEST 2023 by monkey
 
