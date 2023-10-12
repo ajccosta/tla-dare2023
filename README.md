@@ -1,2 +1,2 @@
 # tla-dare2023
-TLA+ project for the DARE 2023 summer school.
+TLA+ specification of Two Phase Commit (2pc) and Three Phase Commit (3pc).
